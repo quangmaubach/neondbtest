@@ -2,6 +2,8 @@ package pocketmath;
 
 import com.zaxxer.hikari.HikariDataSource;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -30,6 +32,7 @@ public class NeonApplication {
             "ASDJF OISAJD F;AJSD F98AJ8UJ9   09j ;oij ;oij OIJ OIJ ;OIJ SDF;OIJMo; ij;oianmsd ;ofij ;o").getBytes(StandardCharsets.UTF_8);
 
     public static void main(String[] args) throws Exception {
+        Logger.getRootLogger().setLevel(Level.INFO);
         HikariDataSource dataSource = new HikariDataSource();
 
         dataSource.setJdbcUrl("jdbc:mysql://neon-performance-test.cic9c2z7qscq.us-east-1.rds.amazonaws.com/neon?rewriteBatchedStatements=true");
@@ -50,9 +53,9 @@ public class NeonApplication {
 
         double[] accumulated = new double[11];
 
-        for (int run = 0; run < numRun; run++) {
+        for (int run = 1; run <= numRun; run++) {
             for (int i = 0; i < numThread; i++) {
-                result.add(executorService.submit(new Task(jdbc)));
+                result.add(executorService.submit(new Task(jdbc, run * 4000)));
             }
 
             for (Future<double[]> f : result) {
@@ -61,10 +64,10 @@ public class NeonApplication {
                     accumulated[i] += r[i];
                 }
             }
-        }
 
-        for (int i = 1; i < 11; i++) {
-            log.info("Average step {} is {}", i * 100, accumulated[i] / (numThread*numRun));
+            for (int i = 1; i < 11; i++) {
+                log.info("Average step {} is {}", i * 100, accumulated[i] / numThread);
+            }
         }
 
         executorService.shutdown();
@@ -72,9 +75,11 @@ public class NeonApplication {
 
     private static final class Task implements Callable<double[]> {
         final JdbcTemplate jdbcTemplate;
+        final int size;
 
-        public Task(JdbcTemplate jdbcTemplates) {
+        public Task(JdbcTemplate jdbcTemplates, int size) {
             this.jdbcTemplate = jdbcTemplates;
+            this.size = size;
         }
 
         @Override
@@ -86,7 +91,7 @@ public class NeonApplication {
             for (int step = 1; step < 11; step++) {
                 List<Integer> list = new ArrayList<>();
 
-                for (int i = 0; i < 12000; i++) {
+                for (int i = 0; i < size; i++) {
                     list.add(random.nextInt());
                 }
 

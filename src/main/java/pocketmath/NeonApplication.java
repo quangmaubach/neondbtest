@@ -2,8 +2,6 @@ package pocketmath;
 
 import com.zaxxer.hikari.HikariDataSource;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -45,7 +43,6 @@ public class NeonApplication {
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
 
         final int numThread = Integer.parseInt(args[0]);
-        final int numRun = Integer.parseInt(args[1]);
         final ArrayList<Future<double[]>> result = new ArrayList<>(numThread);
 
         ExecutorService executorService = Executors.newFixedThreadPool(numThread);
@@ -100,25 +97,32 @@ public class NeonApplication {
                 final int step_f = step * 100;
 
                 final long startNano = System.nanoTime();
+                int startIndex = 0;
 
-                jdbcTemplate.batchUpdate(
-                        "INSERT INTO bid_details_409016" + " (`KEY`, `VALUE`) " +
-                                "VALUES (?, ?) " +
-                                "ON DUPLICATE KEY UPDATE `VALUE` = VALUES(`VALUE`)",
-                        new BatchPreparedStatementSetter() {
-                            @Override
-                            public void setValues(PreparedStatement ps, int i) throws SQLException {
-                                byte[] encrypted = md5(list.get(i).toString());
-                                ps.setBytes(1, encrypted);
-                                ps.setBytes(2, someLongText);
-                            }
+                while (startIndex < size) {
+                    int fromIndex = startIndex;
+                    int toIndex = Math.min(fromIndex + step_f, size);
+                    List<Integer> subList = list.subList(fromIndex, toIndex);
 
-                            @Override
-                            public int getBatchSize() {
-                                return step_f;
+                    jdbcTemplate.batchUpdate(
+                            "INSERT INTO bid_details_409016" + " (`KEY`, `VALUE`) " +
+                                    "VALUES (?, ?) " +
+                                    "ON DUPLICATE KEY UPDATE `VALUE` = VALUES(`VALUE`)",
+                            new BatchPreparedStatementSetter() {
+                                @Override
+                                public void setValues(PreparedStatement ps, int i) throws SQLException {
+                                    byte[] encrypted = md5(list.get(i).toString());
+                                    ps.setBytes(1, encrypted);
+                                    ps.setBytes(2, someLongText);
+                                }
+
+                                @Override
+                                public int getBatchSize() {
+                                    return subList.size();
+                                }
                             }
-                        }
-                );
+                    );
+                }
 
                 resultArray[step] = (System.nanoTime() - startNano) / 1_000_000D;
             }

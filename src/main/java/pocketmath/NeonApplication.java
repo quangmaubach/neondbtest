@@ -111,7 +111,7 @@ public class NeonApplication {
                 List<String> subList = list.subList(fromIndex, toIndex);
 
                 jdbcTemplate.batchUpdate(
-                        "INSERT INTO bid_details_409016" + " (`KEY`, `VALUE`) " +
+                        "INSERT INTO bid_details_500000" + " (`KEY`, `VALUE`) " +
                                 "VALUES (?, ?) " +
                                 "ON DUPLICATE KEY UPDATE `VALUE` = VALUES(`VALUE`)",
                         new BatchPreparedStatementSetter() {

@@ -68,7 +68,7 @@ public class NeonApplication {
                 log.info("Average step {} is {} for eventSize={}", i * 100, accumulated[i] / numThread, eventSize);
             }
 
-            log.info("==========================================================================================");
+            log.info("==========================================================================================\n");
         }
 
         executorService.shutdown();

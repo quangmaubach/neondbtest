@@ -48,9 +48,9 @@ public class NeonApplication {
         ExecutorService executorService = Executors.newFixedThreadPool(numThread);
 
         //final int[] fixedEventsSize = new int[] {100, 150, 200, 350, 999, 1001, 1302, 1700, 1987, 2313, 8192, 12036};
-        final int[] fixedEventsSize = new int[] {100, 150, 90, 110, 80, 120};
+        final int[] fixedEventsSize = new int[] {100, 150, 100, 150, 200, 300, 200, 300, 500, 800, 500, 800, 1000, 1300, 1000, 1300};
         //final int[] fixedBatchSize = new int[] {100, 200, 300, 500, 800, 900, 1000, 1200};
-        final int[] fixedBatchSize = new int[] {100, 200, 300, 100, 200, 300, 100, 200, 300};
+        final int[] fixedBatchSize = new int[] {100, 200, 500, 1000, 100, 200, 500, 1000,};
 
         for (int eventSize: fixedEventsSize) {
             for (int batchSize: fixedBatchSize) {

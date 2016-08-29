@@ -96,7 +96,7 @@ public class NeonApplication {
                     "ON DUPLICATE KEY UPDATE `VALUE` = VALUES(`VALUE`)");
 
             for (int step = 1; step < 11; step++) {
-                Thread.sleep(random.nextLong(500));
+                Thread.sleep(random.nextLong(50));
                 List<String> list = new ArrayList<>();
 
                 for (int i = 0; i < eventSize; i++) {

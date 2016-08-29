@@ -66,6 +66,8 @@ public class NeonApplication {
                 }
 
                 log.info("BatchSize={}, eventSize={}, time={}", batchSize, eventSize, accumulated/numThread);
+
+                Thread.sleep(2000);
             }
             log.info("==========================================================================================");
             log.info("\n");

@@ -91,7 +91,7 @@ public class NeonApplication {
         public Double call() throws Exception {
             ThreadLocalRandom random = ThreadLocalRandom.current();
 
-            Thread.sleep(random.nextLong(1000));
+            Thread.sleep(random.nextLong(2000));
 
             // trigger connection
             jdbcTemplate.update("INSERT INTO bid_details_409016" + " (`KEY`, `VALUE`) " +

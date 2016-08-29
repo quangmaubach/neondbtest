@@ -68,7 +68,8 @@ public class NeonApplication {
                 log.info("Average step {} is {} for eventSize={}", i * 100, accumulated[i] / numThread, eventSize);
             }
 
-            log.info("==========================================================================================\n");
+            log.info("==========================================================================================");
+            log.info("\n");
         }
 
         executorService.shutdown();
@@ -94,9 +95,8 @@ public class NeonApplication {
                     "VALUES (1, 2) " +
                     "ON DUPLICATE KEY UPDATE `VALUE` = VALUES(`VALUE`)");
 
-            Thread.sleep(random.nextLong(500));
-
             for (int step = 1; step < 11; step++) {
+                Thread.sleep(random.nextLong(500));
                 List<String> list = new ArrayList<>();
 
                 for (int i = 0; i < eventSize; i++) {

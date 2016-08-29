@@ -32,7 +32,6 @@ public class NeonApplication {
             "ASDJF OISAJD F;AJSD F98AJ8UJ9   09j ;oij ;oij OIJ OIJ ;OIJ SDF;OIJMo; ij;oianmsd ;ofij ;o").getBytes(StandardCharsets.UTF_8);
 
     public static void main(String[] args) throws Exception {
-        Logger.getRootLogger().setLevel(Level.INFO);
         HikariDataSource dataSource = new HikariDataSource();
 
         dataSource.setJdbcUrl("jdbc:mysql://neon-performance-test.cic9c2z7qscq.us-east-1.rds.amazonaws.com/neon?rewriteBatchedStatements=true");
@@ -51,11 +50,10 @@ public class NeonApplication {
 
         ExecutorService executorService = Executors.newFixedThreadPool(numThread);
 
-        double[] accumulated = new double[11];
-
         for (int run = 1; run <= numRun; run++) {
+            double[] accumulated = new double[11];
             for (int i = 0; i < numThread; i++) {
-                result.add(executorService.submit(new Task(jdbc, run * 4000)));
+                result.add(executorService.submit(new Task(jdbc, run * 1000)));
             }
 
             for (Future<double[]> f : result) {
@@ -66,7 +64,7 @@ public class NeonApplication {
             }
 
             for (int i = 1; i < 11; i++) {
-                log.info("Average step {} is {}", i * 100, accumulated[i] / numThread);
+                log.info("Average step {} is {} for size={}", i * 100, accumulated[i] / numThread, run * 1000);
             }
         }
 

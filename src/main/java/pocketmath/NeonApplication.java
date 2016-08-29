@@ -36,23 +36,25 @@ public class NeonApplication {
         dataSource.setDriverClassName("com.mysql.jdbc.Driver");
         dataSource.addDataSourceProperty("user", "admin");
         dataSource.addDataSourceProperty("password", "08d1fbe846d35a03");
-        dataSource.setMaximumPoolSize(100);
-        dataSource.setConnectionTimeout(30000);
+        dataSource.setMaximumPoolSize(80);
+        dataSource.setIdleTimeout(20);
+        dataSource.setConnectionTimeout(300000);
         dataSource.setTransactionIsolation("TRANSACTION_READ_COMMITTED");
 
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
 
         final int numThread = Integer.parseInt(args[0]);
-        final ArrayList<Future<double[]>> result = new ArrayList<>(numThread);
 
         ExecutorService executorService = Executors.newFixedThreadPool(numThread);
 
-        final int[] fixedSize = new int[] {100, 200, 500, 1000, 2000, 3000, 5000, 8000, 10000, 12000};
+        final int[] fixedEventsSize = new int[] {100, 200,};// 500, 1000, 2000, 3000, 5000, 8000, 10000, 12000};
 
-        for (int size: fixedSize) {
+        for (int eventSize: fixedEventsSize) {
             double[] accumulated = new double[11];
+            final ArrayList<Future<double[]>> result = new ArrayList<>(numThread);
+
             for (int i = 0; i < numThread; i++) {
-                result.add(executorService.submit(new Task(jdbc, size)));
+                result.add(executorService.submit(new Task(jdbc, eventSize)));
             }
 
             for (Future<double[]> f : result) {
@@ -63,7 +65,7 @@ public class NeonApplication {
             }
 
             for (int i = 1; i < 11; i++) {
-                log.info("Average step {} is {} for size={}", i * 100, accumulated[i] / numThread, size);
+                log.info("Average step {} is {} for eventSize={}", i * 100, accumulated[i] / numThread, eventSize);
             }
 
             log.info("==========================================================================================");
@@ -74,11 +76,11 @@ public class NeonApplication {
 
     private static final class Task implements Callable<double[]> {
         final JdbcTemplate jdbcTemplate;
-        final int size;
+        final int eventSize;
 
-        public Task(JdbcTemplate jdbcTemplates, int size) {
+        public Task(JdbcTemplate jdbcTemplates, int eventSize) {
             this.jdbcTemplate = jdbcTemplates;
-            this.size = size;
+            this.eventSize = eventSize;
         }
 
         @Override
@@ -87,10 +89,15 @@ public class NeonApplication {
 
             double[] resultArray = new double[11];
 
+            // trigger connection
+            jdbcTemplate.update("INSERT INTO bid_details_409016" + " (`KEY`, `VALUE`) " +
+                    "VALUES (1, 2) " +
+                    "ON DUPLICATE KEY UPDATE `VALUE` = VALUES(`VALUE`)");
+
             for (int step = 1; step < 11; step++) {
                 List<Integer> list = new ArrayList<>();
 
-                for (int i = 0; i < size; i++) {
+                for (int i = 0; i < eventSize; i++) {
                     list.add(random.nextInt());
                 }
 
@@ -99,9 +106,9 @@ public class NeonApplication {
                 final long startNano = System.nanoTime();
                 int startIndex = 0;
 
-                while (startIndex < size) {
+                while (startIndex < eventSize) {
                     int fromIndex = startIndex;
-                    int toIndex = Math.min(fromIndex + step_f, size);
+                    int toIndex = Math.min(fromIndex + step_f, eventSize);
                     List<Integer> subList = list.subList(fromIndex, toIndex);
 
                     jdbcTemplate.batchUpdate(
@@ -111,7 +118,7 @@ public class NeonApplication {
                             new BatchPreparedStatementSetter() {
                                 @Override
                                 public void setValues(PreparedStatement ps, int i) throws SQLException {
-                                    byte[] encrypted = md5(list.get(i).toString());
+                                    byte[] encrypted = md5(subList.get(i).toString());
                                     ps.setBytes(1, encrypted);
                                     ps.setBytes(2, someLongText);
                                 }
@@ -122,6 +129,7 @@ public class NeonApplication {
                                 }
                             }
                     );
+                    startIndex = toIndex;
                 }
 
                 resultArray[step] = (System.nanoTime() - startNano) / 1_000_000D;

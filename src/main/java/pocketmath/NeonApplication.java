@@ -64,7 +64,7 @@ public class NeonApplication {
         }
 
         for (int i = 1; i < 11; i++) {
-            log.info("Average step {} is {}", i * 100, accumulated[i] / numThread*numRun);
+            log.info("Average step {} is {}", i * 100, accumulated[i] / (numThread*numRun));
         }
 
         executorService.shutdown();

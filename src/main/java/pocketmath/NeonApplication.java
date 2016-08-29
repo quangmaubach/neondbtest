@@ -97,10 +97,10 @@ public class NeonApplication {
             Thread.sleep(random.nextLong(500));
 
             for (int step = 1; step < 11; step++) {
-                List<Integer> list = new ArrayList<>();
+                List<String> list = new ArrayList<>();
 
                 for (int i = 0; i < eventSize; i++) {
-                    list.add(random.nextInt());
+                    list.add(Integer.valueOf(random.nextInt()).toString() + Integer.valueOf(random.nextInt()).toString());
                 }
 
                 final int step_f = step * 100;
@@ -111,7 +111,7 @@ public class NeonApplication {
                 while (startIndex < eventSize) {
                     int fromIndex = startIndex;
                     int toIndex = Math.min(fromIndex + step_f, eventSize);
-                    List<Integer> subList = list.subList(fromIndex, toIndex);
+                    List<String> subList = list.subList(fromIndex, toIndex);
 
                     jdbcTemplate.batchUpdate(
                             "INSERT INTO bid_details_409016" + " (`KEY`, `VALUE`) " +
@@ -120,7 +120,7 @@ public class NeonApplication {
                             new BatchPreparedStatementSetter() {
                                 @Override
                                 public void setValues(PreparedStatement ps, int i) throws SQLException {
-                                    byte[] encrypted = md5(subList.get(i).toString());
+                                    byte[] encrypted = md5(subList.get(i));
                                     ps.setBytes(1, encrypted);
                                     ps.setBytes(2, someLongText);
                                 }

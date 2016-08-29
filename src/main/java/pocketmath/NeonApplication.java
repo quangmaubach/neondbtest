@@ -47,7 +47,7 @@ public class NeonApplication {
 
         ExecutorService executorService = Executors.newFixedThreadPool(numThread);
 
-        final int[] fixedEventsSize = new int[] {100, 200,};// 500, 1000, 2000, 3000, 5000, 8000, 10000, 12000};
+        final int[] fixedEventsSize = new int[] {100, 100, 200, 500, 1000, 2000, 3000, 5000, 8000, 10000, 12000};
 
         for (int eventSize: fixedEventsSize) {
             double[] accumulated = new double[11];
@@ -94,6 +94,8 @@ public class NeonApplication {
                     "VALUES (1, 2) " +
                     "ON DUPLICATE KEY UPDATE `VALUE` = VALUES(`VALUE`)");
 
+            Thread.sleep(random.nextLong(500));
+
             for (int step = 1; step < 11; step++) {
                 List<Integer> list = new ArrayList<>();
 
@@ -134,8 +136,6 @@ public class NeonApplication {
 
                 resultArray[step] = (System.nanoTime() - startNano) / 1_000_000D;
             }
-
-            Thread.sleep(random.nextLong(1000));
 
             return resultArray;
         }

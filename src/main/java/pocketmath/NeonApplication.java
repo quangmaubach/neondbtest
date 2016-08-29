@@ -50,10 +50,12 @@ public class NeonApplication {
 
         ExecutorService executorService = Executors.newFixedThreadPool(numThread);
 
-        for (int run = 1; run <= numRun; run++) {
+        final int[] fixedSize = new int[] {100, 200, 500, 1000, 2000, 3000, 5000, 8000, 10000, 12000};
+
+        for (int size: fixedSize) {
             double[] accumulated = new double[11];
             for (int i = 0; i < numThread; i++) {
-                result.add(executorService.submit(new Task(jdbc, run * 1000)));
+                result.add(executorService.submit(new Task(jdbc, size)));
             }
 
             for (Future<double[]> f : result) {
@@ -64,8 +66,10 @@ public class NeonApplication {
             }
 
             for (int i = 1; i < 11; i++) {
-                log.info("Average step {} is {} for size={}", i * 100, accumulated[i] / numThread, run * 1000);
+                log.info("Average step {} is {} for size={}", i * 100, accumulated[i] / numThread, size);
             }
+
+            log.info("==========================================================================================");
         }
 
         executorService.shutdown();

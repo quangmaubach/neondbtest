@@ -48,26 +48,23 @@ public class NeonApplication {
         ExecutorService executorService = Executors.newFixedThreadPool(numThread);
 
         final int[] fixedEventsSize = new int[] {100, 150, 200, 350, 999, 1001, 1302, 1700, 1987, 2313, 8192, 12036};
+        final int[] fixedBatchSize = new int[] {100, 200, 300, 500, 800, 900, 1000, 1200};
 
         for (int eventSize: fixedEventsSize) {
-            double[] accumulated = new double[11];
-            final ArrayList<Future<double[]>> result = new ArrayList<>(numThread);
+            for (int batchSize: fixedBatchSize) {
+                double accumulated = 0;
+                final ArrayList<Future<Double>> result = new ArrayList<>(numThread);
 
-            for (int i = 0; i < numThread; i++) {
-                result.add(executorService.submit(new Task(jdbc, eventSize)));
-            }
-
-            for (Future<double[]> f : result) {
-                double[] r = f.get();
-                for (int i = 1; i < 11; i++) {
-                    accumulated[i] += r[i];
+                for (int i = 0; i < numThread; i++) {
+                    result.add(executorService.submit(new Task(jdbc, eventSize, batchSize)));
                 }
-            }
 
-            for (int i = 1; i < 11; i++) {
-                log.info("Average step {} is {} for eventSize={}", i * 100, accumulated[i] / numThread, eventSize);
-            }
+                for (Future<Double> f : result) {
+                    accumulated += f.get();
+                }
 
+                log.info("BatchSize={}, eventSize={}, time={}", batchSize, eventSize, accumulated/numThread);
+            }
             log.info("==========================================================================================");
             log.info("\n");
         }
@@ -75,69 +72,64 @@ public class NeonApplication {
         executorService.shutdown();
     }
 
-    private static final class Task implements Callable<double[]> {
+    private static final class Task implements Callable<Double> {
         final JdbcTemplate jdbcTemplate;
         final int eventSize;
+        final int batchSize;
 
-        public Task(JdbcTemplate jdbcTemplates, int eventSize) {
+        public Task(JdbcTemplate jdbcTemplates, int eventSize, int batchSize) {
             this.jdbcTemplate = jdbcTemplates;
             this.eventSize = eventSize;
+            this.batchSize = batchSize;
         }
 
         @Override
-        public double[] call() throws Exception {
+        public Double call() throws Exception {
             ThreadLocalRandom random = ThreadLocalRandom.current();
 
-            double[] resultArray = new double[11];
+            Thread.sleep(random.nextLong(1000));
 
             // trigger connection
             jdbcTemplate.update("INSERT INTO bid_details_409016" + " (`KEY`, `VALUE`) " +
                     "VALUES (1, 2) " +
                     "ON DUPLICATE KEY UPDATE `VALUE` = VALUES(`VALUE`)");
 
-            for (int step = 1; step < 11; step++) {
-                Thread.sleep(random.nextLong(50));
-                List<String> list = new ArrayList<>();
+            List<String> list = new ArrayList<>();
 
-                for (int i = 0; i < eventSize; i++) {
-                    list.add(Integer.valueOf(random.nextInt()).toString() + Integer.valueOf(random.nextInt()).toString());
-                }
-
-                final int step_f = step * 100;
-
-                final long startNano = System.nanoTime();
-                int startIndex = 0;
-
-                while (startIndex < eventSize) {
-                    int fromIndex = startIndex;
-                    int toIndex = Math.min(fromIndex + step_f, eventSize);
-                    List<String> subList = list.subList(fromIndex, toIndex);
-
-                    jdbcTemplate.batchUpdate(
-                            "INSERT INTO bid_details_409016" + " (`KEY`, `VALUE`) " +
-                                    "VALUES (?, ?) " +
-                                    "ON DUPLICATE KEY UPDATE `VALUE` = VALUES(`VALUE`)",
-                            new BatchPreparedStatementSetter() {
-                                @Override
-                                public void setValues(PreparedStatement ps, int i) throws SQLException {
-                                    byte[] encrypted = md5(subList.get(i));
-                                    ps.setBytes(1, encrypted);
-                                    ps.setBytes(2, someLongText);
-                                }
-
-                                @Override
-                                public int getBatchSize() {
-                                    return subList.size();
-                                }
-                            }
-                    );
-                    startIndex = toIndex;
-                }
-
-                resultArray[step] = (System.nanoTime() - startNano) / 1_000_000D;
+            for (int i = 0; i < eventSize; i++) {
+                list.add(Integer.valueOf(random.nextInt()).toString() + Integer.valueOf(random.nextInt()).toString());
             }
 
-            return resultArray;
+            final long startNano = System.nanoTime();
+            int startIndex = 0;
+
+            while (startIndex < eventSize) {
+                int fromIndex = startIndex;
+                int toIndex = Math.min(fromIndex + batchSize, eventSize);
+                List<String> subList = list.subList(fromIndex, toIndex);
+
+                jdbcTemplate.batchUpdate(
+                        "INSERT INTO bid_details_409016" + " (`KEY`, `VALUE`) " +
+                                "VALUES (?, ?) " +
+                                "ON DUPLICATE KEY UPDATE `VALUE` = VALUES(`VALUE`)",
+                        new BatchPreparedStatementSetter() {
+                            @Override
+                            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                                byte[] encrypted = md5(subList.get(i));
+                                ps.setBytes(1, encrypted);
+                                ps.setBytes(2, someLongText);
+                            }
+
+                            @Override
+                            public int getBatchSize() {
+                                return subList.size();
+                            }
+                        }
+                );
+                startIndex = toIndex;
+            }
+
+            return (System.nanoTime() - startNano) / 1_000_000D;
         }
     }
 }

@@ -56,7 +56,7 @@ public class NeonApplication {
         ExecutorService executorService = Executors.newFixedThreadPool(numThread);
 
         //final int[] fixedEventsSize = new int[] {100, 150, 200, 350, 999, 1001, 1302, 1700, 1987, 2313, 8192, 12036};
-        final int[] fixedEventsSize = new int[] {100, 100, 100, 100, 150, 150, 150, 200, 200, 200};
+        final int[] fixedEventsSize = new int[] {100, 150, 200, 300, 500, 1000};
         //final int[] fixedBatchSize = new int[] {100, 200, 300, 500, 800, 900, 1000, 1200};
         final int[] fixedBatchSize = new int[] {100, 200, 500, 1000,};
 
@@ -99,10 +99,12 @@ public class NeonApplication {
         public Double call() throws Exception {
             ThreadLocalRandom random = ThreadLocalRandom.current();
 
-            Thread.sleep(random.nextLong(2000));
-            final long startNano = System.nanoTime();
+            long totalTime=0;
 
-            for (int loop=0; loop <3; loop++) {
+            for (int loop=0; loop <10; loop++) {
+                Thread.sleep(random.nextLong(3000));
+                final long startNano = System.nanoTime();
+
                 List<String> list = new ArrayList<>();
 
                 for (int i = 0; i < eventSize; i++) {
@@ -150,9 +152,11 @@ public class NeonApplication {
                     );
                     startIndex = toIndex;
                 }
+
+                totalTime += System.nanoTime() - startNano;
             }
 
-            return (System.nanoTime() - startNano)/3/ 1_000_000D;
+            return totalTime/10_000_000D;
         }
     }
 }

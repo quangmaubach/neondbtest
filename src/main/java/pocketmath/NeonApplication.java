@@ -15,6 +15,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -110,7 +111,20 @@ public class NeonApplication {
             while (startIndex < eventSize) {
                 int fromIndex = startIndex;
                 int toIndex = Math.min(fromIndex + batchSize, eventSize);
-                List<String> subList = list.subList(fromIndex, toIndex);
+                List<byte[]> subList = list.subList(fromIndex, toIndex).stream().map(e -> md5(e)).sorted(
+                        (o1, o2) -> {
+
+                            for (int i = 0; i < o1.length; i++) {
+                                if (o1[i] < o2[i]) {
+                                    return -1;
+                                } else if (o1[i] > o2[i]) {
+                                    return 1;
+                                }
+                            }
+
+                            return 0;
+                        }
+                ).collect(Collectors.toList());
 
                 jdbcTemplate.batchUpdate(
                         "INSERT INTO bid_details_500000" + " (`KEY`, `VALUE`) " +
@@ -119,8 +133,7 @@ public class NeonApplication {
                         new BatchPreparedStatementSetter() {
                             @Override
                             public void setValues(PreparedStatement ps, int i) throws SQLException {
-                                byte[] encrypted = md5(subList.get(i));
-                                ps.setBytes(1, encrypted);
+                                ps.setBytes(1, subList.get(i));
                                 ps.setBytes(2, someLongText);
                             }
 

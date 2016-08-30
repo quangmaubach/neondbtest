@@ -108,23 +108,25 @@ public class NeonApplication {
             final long startNano = System.nanoTime();
             int startIndex = 0;
 
+            List<byte[]> byteList = list.stream().map(e -> md5(e)).sorted(
+                    (o1, o2) -> {
+
+                        for (int i = 0; i < o1.length; i++) {
+                            if (o1[i] < o2[i]) {
+                                return -1;
+                            } else if (o1[i] > o2[i]) {
+                                return 1;
+                            }
+                        }
+
+                        return 0;
+                    }
+            ).collect(Collectors.toList());
+
             while (startIndex < eventSize) {
                 int fromIndex = startIndex;
                 int toIndex = Math.min(fromIndex + batchSize, eventSize);
-                List<byte[]> subList = list.subList(fromIndex, toIndex).stream().map(e -> md5(e)).sorted(
-                        (o1, o2) -> {
-
-                            for (int i = 0; i < o1.length; i++) {
-                                if (o1[i] < o2[i]) {
-                                    return -1;
-                                } else if (o1[i] > o2[i]) {
-                                    return 1;
-                                }
-                            }
-
-                            return 0;
-                        }
-                ).collect(Collectors.toList());
+                List<byte[]> subList = byteList.subList(fromIndex, toIndex);
 
                 jdbcTemplate.batchUpdate(
                         "INSERT INTO bid_details_500000" + " (`KEY`, `VALUE`) " +

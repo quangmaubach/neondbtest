@@ -30,23 +30,28 @@ public class NeonApplication {
             "(*H AS9DFP8YAS9PDFASDFADSFASDKJFH AS;DJIF SADJ FLKASJ DFLKJSA D;FIJ A;OSIDJF OISAJD FOISA" +
             "ASDJF OISAJD F;AJSD F98AJ8UJ9   09j ;oij ;oij OIJ OIJ ;OIJ SDF;OIJMo; ij;oianmsd ;ofij ;o").getBytes(StandardCharsets.UTF_8);
 
-    public static void main(String[] args) throws Exception {
-        HikariDataSource dataSource = new HikariDataSource();
+    static int numLoop;
 
+    public static void main(String[] args) throws Exception {
         final int numThread = Integer.parseInt(args[0]);
+        final int batchSize = Integer.parseInt(args[1]);
+        final int numEvent = Integer.parseInt(args[2]);
+        numLoop = Integer.parseInt(args[3]);
+
+        HikariDataSource dataSource = new HikariDataSource();
 
         dataSource.setJdbcUrl("jdbc:mysql://neon-performance-test.cic9c2z7qscq.us-east-1.rds.amazonaws.com/neon?rewriteBatchedStatements=true");
         dataSource.setDriverClassName("com.mysql.jdbc.Driver");
         dataSource.addDataSourceProperty("user", "admin");
         dataSource.addDataSourceProperty("password", "08d1fbe846d35a03");
-        dataSource.setMaximumPoolSize(numThread);
+        dataSource.setMaximumPoolSize((int) 1.5*numThread);
         dataSource.setIdleTimeout(numThread);
-        dataSource.setConnectionTimeout(300000);
+        dataSource.setConnectionTimeout(30000);
         dataSource.setTransactionIsolation("TRANSACTION_READ_COMMITTED");
 
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
 
-        for (int i=0; i< numThread; i++) {
+        for (int i=0; i< 10*numThread; i++) {
             // trigger connection
             jdbc.update("INSERT INTO bid_details_500000" + " (`KEY`, `VALUE`) " +
                     "VALUES (1, 2) " +
@@ -55,31 +60,18 @@ public class NeonApplication {
 
         ExecutorService executorService = Executors.newFixedThreadPool(numThread);
 
-        //final int[] fixedEventsSize = new int[] {100, 150, 200, 350, 999, 1001, 1302, 1700, 1987, 2313, 8192, 12036};
-        final int[] fixedEventsSize = new int[] {100, 150, 200, 300, 500, 1000};
-        //final int[] fixedBatchSize = new int[] {100, 200, 300, 500, 800, 900, 1000, 1200};
-        final int[] fixedBatchSize = new int[] {100, 200, 500, 1000,};
+        double accumulated = 0;
+        final ArrayList<Future<Double>> result = new ArrayList<>(numThread);
 
-        for (int eventSize: fixedEventsSize) {
-            for (int batchSize: fixedBatchSize) {
-                double accumulated = 0;
-                final ArrayList<Future<Double>> result = new ArrayList<>(numThread);
-
-                for (int i = 0; i < numThread; i++) {
-                    result.add(executorService.submit(new Task(jdbc, eventSize, batchSize)));
-                }
-
-                for (Future<Double> f : result) {
-                    accumulated += f.get();
-                }
-
-                log.info("BatchSize={}, eventSize={}, time={}", batchSize, eventSize, accumulated/numThread);
-
-                Thread.sleep(5000);
-            }
-            log.info("==========================================================================================");
-            log.info("\n");
+        for (int i = 0; i < numThread; i++) {
+            result.add(executorService.submit(new Task(jdbc, numEvent, batchSize)));
         }
+
+        for (Future<Double> f : result) {
+            accumulated += f.get();
+        }
+
+        log.info("BatchSize={}, eventSize={}, time={}", batchSize, numEvent, accumulated/numThread);
 
         executorService.shutdown();
     }
@@ -101,7 +93,7 @@ public class NeonApplication {
 
             long totalTime=0;
 
-            for (int loop=0; loop <15; loop++) {
+            for (int loop=0; loop < numLoop; loop++) {
                 Thread.sleep(random.nextLong(4000));
                 final long startNano = System.nanoTime();
 
@@ -156,7 +148,7 @@ public class NeonApplication {
                 totalTime += System.nanoTime() - startNano;
             }
 
-            return totalTime/15_000_000D;
+            return totalTime/(1_000_000D * numLoop);
         }
     }
 }

@@ -75,7 +75,7 @@ public class NeonApplication {
 
                 log.info("BatchSize={}, eventSize={}, time={}", batchSize, eventSize, accumulated/numThread);
 
-                Thread.sleep(2000);
+                Thread.sleep(5000);
             }
             log.info("==========================================================================================");
             log.info("\n");
@@ -101,8 +101,8 @@ public class NeonApplication {
 
             long totalTime=0;
 
-            for (int loop=0; loop <10; loop++) {
-                Thread.sleep(random.nextLong(3000));
+            for (int loop=0; loop <15; loop++) {
+                Thread.sleep(random.nextLong(4000));
                 final long startNano = System.nanoTime();
 
                 List<String> list = new ArrayList<>();
@@ -156,7 +156,7 @@ public class NeonApplication {
                 totalTime += System.nanoTime() - startNano;
             }
 
-            return totalTime/10_000_000D;
+            return totalTime/15_000_000D;
         }
     }
 }

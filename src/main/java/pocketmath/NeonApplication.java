@@ -33,18 +33,25 @@ public class NeonApplication {
     public static void main(String[] args) throws Exception {
         HikariDataSource dataSource = new HikariDataSource();
 
+        final int numThread = Integer.parseInt(args[0]);
+
         dataSource.setJdbcUrl("jdbc:mysql://neon-performance-test.cic9c2z7qscq.us-east-1.rds.amazonaws.com/neon?rewriteBatchedStatements=true");
         dataSource.setDriverClassName("com.mysql.jdbc.Driver");
         dataSource.addDataSourceProperty("user", "admin");
         dataSource.addDataSourceProperty("password", "08d1fbe846d35a03");
-        dataSource.setMaximumPoolSize(80);
-        dataSource.setIdleTimeout(20);
+        dataSource.setMaximumPoolSize(numThread);
+        dataSource.setIdleTimeout(numThread);
         dataSource.setConnectionTimeout(300000);
         dataSource.setTransactionIsolation("TRANSACTION_READ_COMMITTED");
 
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
 
-        final int numThread = Integer.parseInt(args[0]);
+        for (int i=0; i< numThread; i++) {
+            // trigger connection
+            jdbc.update("INSERT INTO bid_details_500000" + " (`KEY`, `VALUE`) " +
+                    "VALUES (1, 2) " +
+                    "ON DUPLICATE KEY UPDATE `VALUE` = VALUES(`VALUE`)");
+        }
 
         ExecutorService executorService = Executors.newFixedThreadPool(numThread);
 
@@ -93,11 +100,6 @@ public class NeonApplication {
             ThreadLocalRandom random = ThreadLocalRandom.current();
 
             Thread.sleep(random.nextLong(2000));
-
-            // trigger connection
-            jdbcTemplate.update("INSERT INTO bid_details_409016" + " (`KEY`, `VALUE`) " +
-                    "VALUES (1, 2) " +
-                    "ON DUPLICATE KEY UPDATE `VALUE` = VALUES(`VALUE`)");
 
             List<String> list = new ArrayList<>();
 

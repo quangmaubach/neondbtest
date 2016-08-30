@@ -56,9 +56,9 @@ public class NeonApplication {
         ExecutorService executorService = Executors.newFixedThreadPool(numThread);
 
         //final int[] fixedEventsSize = new int[] {100, 150, 200, 350, 999, 1001, 1302, 1700, 1987, 2313, 8192, 12036};
-        final int[] fixedEventsSize = new int[] {100, 150, 100, 150, 200, 300, 200, 300, 500, 800, 500, 800, 1000, 1300, 1000, 1300};
+        final int[] fixedEventsSize = new int[] {100, 100, 100, 100, 150, 150, 150, 200, 200, 200};
         //final int[] fixedBatchSize = new int[] {100, 200, 300, 500, 800, 900, 1000, 1200};
-        final int[] fixedBatchSize = new int[] {100, 200, 500, 1000, 100, 200, 500, 1000,};
+        final int[] fixedBatchSize = new int[] {100, 200, 500, 1000,};
 
         for (int eventSize: fixedEventsSize) {
             for (int batchSize: fixedBatchSize) {
@@ -100,57 +100,59 @@ public class NeonApplication {
             ThreadLocalRandom random = ThreadLocalRandom.current();
 
             Thread.sleep(random.nextLong(2000));
-
-            List<String> list = new ArrayList<>();
-
-            for (int i = 0; i < eventSize; i++) {
-                list.add(Integer.valueOf(random.nextInt()).toString() + Integer.valueOf(random.nextInt()).toString());
-            }
-
             final long startNano = System.nanoTime();
-            int startIndex = 0;
 
-            List<byte[]> byteList = list.stream().map(e -> md5(e)).sorted(
-                    (o1, o2) -> {
+            for (int loop=0; loop <3; loop++) {
+                List<String> list = new ArrayList<>();
 
-                        for (int i = 0; i < o1.length; i++) {
-                            if (o1[i] < o2[i]) {
-                                return -1;
-                            } else if (o1[i] > o2[i]) {
-                                return 1;
+                for (int i = 0; i < eventSize; i++) {
+                    list.add(Integer.valueOf(random.nextInt()).toString() + Integer.valueOf(random.nextInt()).toString());
+                }
+
+                int startIndex = 0;
+
+                List<byte[]> byteList = list.stream().map(e -> md5(e)).sorted(
+                        (o1, o2) -> {
+
+                            for (int i = 0; i < o1.length; i++) {
+                                if (o1[i] < o2[i]) {
+                                    return -1;
+                                } else if (o1[i] > o2[i]) {
+                                    return 1;
+                                }
                             }
+
+                            return 0;
                         }
+                ).collect(Collectors.toList());
 
-                        return 0;
-                    }
-            ).collect(Collectors.toList());
+                while (startIndex < eventSize) {
+                    int fromIndex = startIndex;
+                    int toIndex = Math.min(fromIndex + batchSize, eventSize);
+                    List<byte[]> subList = byteList.subList(fromIndex, toIndex);
 
-            while (startIndex < eventSize) {
-                int fromIndex = startIndex;
-                int toIndex = Math.min(fromIndex + batchSize, eventSize);
-                List<byte[]> subList = byteList.subList(fromIndex, toIndex);
+                    jdbcTemplate.batchUpdate(
+                            "INSERT INTO bid_details_500000" + " (`KEY`, `VALUE`) " +
+                                    "VALUES (?, ?) " +
+                                    "ON DUPLICATE KEY UPDATE `VALUE` = VALUES(`VALUE`)",
+                            new BatchPreparedStatementSetter() {
+                                @Override
+                                public void setValues(PreparedStatement ps, int i) throws SQLException {
+                                    ps.setBytes(1, subList.get(i));
+                                    ps.setBytes(2, someLongText);
+                                }
 
-                jdbcTemplate.batchUpdate(
-                        "INSERT INTO bid_details_500000" + " (`KEY`, `VALUE`) " +
-                                "VALUES (?, ?) " +
-                                "ON DUPLICATE KEY UPDATE `VALUE` = VALUES(`VALUE`)",
-                        new BatchPreparedStatementSetter() {
-                            @Override
-                            public void setValues(PreparedStatement ps, int i) throws SQLException {
-                                ps.setBytes(1, subList.get(i));
-                                ps.setBytes(2, someLongText);
+                                @Override
+                                public int getBatchSize() {
+                                    return subList.size();
+                                }
                             }
-
-                            @Override
-                            public int getBatchSize() {
-                                return subList.size();
-                            }
-                        }
-                );
-                startIndex = toIndex;
+                    );
+                    startIndex = toIndex;
+                }
             }
 
-            return (System.nanoTime() - startNano) / 1_000_000D;
+            return (System.nanoTime() - startNano)/3/ 1_000_000D;
         }
     }
 }
